@@ -22,6 +22,7 @@ app.configure( function(){
 	//app.use(express.cookieParser());
 
 	//Cookies are not really needed... but may be in the future?
+    /*
 	app.use(express.cookieParser());
 	app.use(
 		express.session({
@@ -31,6 +32,7 @@ app.configure( function(){
 			cookie: { path: '/', httpOnly: true, maxAge: 14400000 }
 		})
 	);
+    */
 
 
 });
@@ -177,9 +179,10 @@ function scrub( text ) {
 				clean_data.y = scrub(data.y);
 				clean_data.rot = scrub(data.rot);
 				clean_data.colour = scrub(data.colour);
+				clean_data.notes = scrub(data.notes);
 
 				getRoom(client, function(room) {
-					createCard( room, clean_data.id, clean_data.text, clean_data.x, clean_data.y, clean_data.rot, clean_data.colour);
+					createCard( room, clean_data.id, clean_data.text, clean_data.x, clean_data.y, clean_data.rot, clean_data.colour, clean_data.notes);
 				});
 
 				var message_out = {
@@ -196,10 +199,12 @@ function scrub( text ) {
 				var clean_data = {};
 				clean_data.value = scrub(message.data.value);
 				clean_data.id = scrub(message.data.id);
+				clean_data.notes = scrub(message.data.notes);
+				clean_data.colour = scrub(message.data.colour);
 
 				//send update to database
 				getRoom(client, function(room) {
-					db.cardEdit( room , clean_data.id, clean_data.value );
+					db.cardEdit( room , clean_data.id, clean_data.value, clean_data.notes, clean_data.colour );
 				});
 
 				var message_out = {
@@ -441,7 +446,7 @@ function broadcastToRoom ( client, message ) {
 }
 
 //----------------CARD FUNCTIONS
-function createCard( room, id, text, x, y, rot, colour ) {
+function createCard( room, id, text, x, y, rot, colour, notes ) {
 	var card = {
 		id: id,
 		colour: colour,
@@ -449,7 +454,8 @@ function createCard( room, id, text, x, y, rot, colour ) {
 		x: x,
 		y: y,
 		text: text,
-		sticker: null
+		sticker: null,
+        notes: notes
 	};
 
 	db.createCard(room, id, card);

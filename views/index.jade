@@ -59,6 +59,22 @@ div.names
 	span.you-text\(you)
 	ul#names-ul
 
+div#card-edit-dialog(style='display: none')
+	label(for='card-edit-dialog-colour') Colour
+	span &nbsp;
+	select#card-edit-dialog-colour
+		option(id="white") white
+		option(id="yellow") yellow
+		option(id="blue") blue
+		option(id="green") green
+	br
+	label Title
+	br
+	input#card-edit-dialog-title(type='text')
+	br
+	label Notes
+	br
+	textarea#card-edit-dialog-notes
 
 //<div style="width: 980px; height: 450px; border: solid 2px; opacity:.1; margin-top: 100px"> this will be the backlog that only appears on drag or perhaps not at all</div>
 

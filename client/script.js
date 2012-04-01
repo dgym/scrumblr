@@ -3,6 +3,7 @@ var totalcolumns = 0;
 var columns = [];
 var currentTheme = "bigcards";
 var boardInitialized = false;
+var card_edit_dialog = null;
 
 
 var socket = io.connect();
@@ -87,7 +88,7 @@ function getMessage( m )
 			break;
 			
 		case 'moveCard':
-                        moveCard($("#" + data.id), data.position);
+			moveCard($("#" + data.id), data.position);
 			break;
 			
 		case 'initCards':
@@ -96,7 +97,7 @@ function getMessage( m )
 		
 		case 'createCard':
 			//console.log(data);
-                        drawNewCard(data.id, data.text, data.x, data.y, data.rot, data.colour, null);
+			drawNewCard(data.id, data.text, data.notes, data.x, data.y, data.rot, data.colour, null);
 			break;
 			
 		case 'deleteCard':
@@ -106,7 +107,7 @@ function getMessage( m )
 			break;
 			
 		case	'editCard':
-			$("#" + data.id).children('.content:first').text(data.value);
+            editCard(data);
 			break;
 			
 		case 'initColumns':
@@ -156,9 +157,10 @@ function getMessage( m )
 
 
 
-function drawNewCard(id, text, x, y, rot, colour, sticker, animationspeed)
+function drawNewCard(id, text, notes, x, y, rot, colour, sticker, animationspeed)
 {
-	//cards[id] = {id: id, text: text, x: x, y: y, rot: rot, colour: colour};
+    var card_obj = {id: id, text: text, x: x, y: y, rot: rot, colour: colour, notes: notes};
+	cards[id] = card_obj;
 	
 	var h = '<div id="' + id + '" class="card ' + colour + ' draggable" style="-webkit-transform:rotate(' + rot + 'deg);">\
 	<img src="/images/icons/token/Xion.png" class="card-icon delete-card-icon" />\
@@ -198,6 +200,7 @@ function drawNewCard(id, text, x, y, rot, colour, sticker, animationspeed)
 			oldposition: ui.originalPosition,
 		};
 		
+        updateCardObjPosition(card, data.position);
 		sendAction('moveCard', data);
 	});
 	
@@ -225,6 +228,50 @@ function drawNewCard(id, text, x, y, rot, colour, sticker, animationspeed)
 		top: y + "px" 
 	}, speed);
 	
+	card.dblclick( 
+		function(){ 
+            if (!card_edit_dialog){
+                card_edit_dialog = $('#card-edit-dialog');
+                card_edit_dialog.dialog({title: 'Edit Card', autoOpen: false});
+            }
+
+            var on_ok = function(){
+                card_obj.colour = $('#card-edit-dialog-colour').val();
+                card_obj.text = $('#card-edit-dialog-title').val();
+                card_obj.notes = $('#card-edit-dialog-notes').val();
+                redrawCard(id);
+                sendAction('editCard', {
+                    id: id,
+                    colour: card_obj.colour,
+                    value: card_obj.text,
+                    notes: card_obj.notes,
+                });
+                card_edit_dialog.dialog('close');
+            }
+
+            var on_save_as = function(){
+                var colour = $('#card-edit-dialog-colour').val();
+                var text = $('#card-edit-dialog-title').val();
+                var notes = $('#card-edit-dialog-notes').val();
+                var rotation = Math.random() * 10 - 5; //add a bit of random rotation (+/- 10deg)
+                var uniqueID = Math.round(Math.random()*99999999); //is this big enough to assure uniqueness?
+                createCard('card' + uniqueID, text, parseInt(card_obj.x) + 10, parseInt(card_obj.y) + 10, rotation, colour, notes);
+                card_edit_dialog.dialog('close');
+            }
+            
+            var on_cancel = function(){
+                card_edit_dialog.dialog('close');
+            }
+            
+            card_edit_dialog.dialog({buttons:{'Ok': on_ok, 'Save as New': on_save_as, 'Cancel': on_cancel}});
+
+            $('#card-edit-dialog-colour').val(card_obj.colour);
+            $('#card-edit-dialog-title').val(card_obj.text);
+            $('#card-edit-dialog-notes').val(card_obj.notes);
+            card_edit_dialog.dialog('open');
+        }
+    );
+
 	card.hover( 
 		function(){ 
 			$(this).addClass('hover');
@@ -253,22 +300,28 @@ function drawNewCard(id, text, x, y, rot, colour, sticker, animationspeed)
 		}
 	);
 	
-	card.children('.content').editable( "/edit-card/" + id,
-		{
-			style   : 'inherit',
-			cssclass   : 'card-edit-form',
-			type      : 'textarea',
-			placeholder   : 'Double Click to Edit.',
-			onblur: 'submit',
-			xindicator: '<img src="/images/ajax-loader.gif">',
-			event: 'dblclick', //event: 'mouseover'
-			callback: onCardChange
-		}
-	);
-	
 	//add applicable sticker
 	if (sticker != null)
 		$("#" + id).children('.content').addClass( sticker );
+}
+
+function editCard( data )
+{
+    var card_obj = cards[data.id];
+
+    card_obj.text = data.value;
+    card_obj.colour = data.colour;
+    card_obj.notes = data.notes;
+
+    redrawCard(data.id);
+}
+
+function redrawCard( id )
+{
+    var card_obj = cards[id];
+    var card = $("#" + id);
+    card.children('.content:first').text(card_obj.text);
+    card.children('.card-image').attr('src', '/images/' + card_obj.colour + '-card.png');
 }
 
 
@@ -283,11 +336,20 @@ function onCardChange( text, result )
 	
 }
 
+function updateCardObjPosition(card, position)
+{
+    var id = card.attr('id');
+    var card_obj = cards[id];
+    card_obj.x = position.left;
+    card_obj.y = position.top;
+}
+
 function moveCard(card, position) {
-        card.animate({
-                left: position.left+"px",
-                top: position.top+"px" 
-        }, 500);
+    updateCardObjPosition(card, position);
+    card.animate({
+            left: position.left+"px",
+            top: position.top+"px" 
+    }, 500);
 }
 
 function addSticker ( cardId , stickerId ) 
@@ -315,9 +377,9 @@ function addSticker ( cardId , stickerId )
 //----------------------------------
 // cards
 //----------------------------------
-function createCard( id, text, x, y, rot, colour )
+function createCard( id, text, x, y, rot, colour, notes )
 {
-	drawNewCard(id, text, x, y, rot, colour, null);
+	drawNewCard(id, text, notes, x, y, rot, colour, null);
 	
 	var action = "createCard";
 	
@@ -327,7 +389,8 @@ function createCard( id, text, x, y, rot, colour )
 		x: x,
 		y: y,
 		rot: rot,
-		colour: colour
+		colour: colour,
+        notes: notes
 	};
 	
 	sendAction(action, data);
@@ -349,7 +412,7 @@ function initCards( cardArray )
 	//first delete any cards that exist
 	$('.card').remove();
 	
-	cards = cardArray;
+	cards = {};
 	
 	for (i in cardArray)
 	{
@@ -358,6 +421,7 @@ function initCards( cardArray )
 		drawNewCard(
 			card.id,
 			card.text,
+            card.notes,
 			card.x,
 			card.y,
 			card.rot,
@@ -687,7 +751,8 @@ $(function() {
 				'',
 			 	58, $('div.board-outline').height(),// hack - not a great way to get the new card coordinates, but most consistant ATM
 			   rotation,
-			   randomCardColour());
+			   'white',
+               '');
 		});
 		
 		
