@@ -4,6 +4,7 @@ var columns = [];
 var currentTheme = "bigcards";
 var boardInitialized = false;
 var card_edit_dialog = null;
+var card_colours = [];
 
 
 var socket = io.connect();
@@ -94,6 +95,10 @@ function getMessage( m )
 		case 'initCards':
 			initCards(data);
 			break;
+
+        case 'initCardColours':
+            card_colours = data;
+            break;
 		
 		case 'createCard':
 			//console.log(data);
@@ -230,12 +235,19 @@ function drawNewCard(id, text, notes, x, y, rot, colour, sticker, animationspeed
 	
 	card.dblclick( 
 		function(){ 
-            if (!card_edit_dialog){
+            if (!card_edit_dialog)
+            {
                 card_edit_dialog = $('#card-edit-dialog');
                 card_edit_dialog.dialog({title: 'Edit Card', autoOpen: false});
+                var colours = $('#card-edit-dialog-colour');
+                colours.children().remove();
+                card_colours.forEach(function(colour){
+                    colours.append('<option id="' + colour + '">' + colour + '</option>');
+                });
             }
 
-            var on_ok = function(){
+            var on_ok = function()
+            {
                 card_obj.colour = $('#card-edit-dialog-colour').val();
                 card_obj.text = $('#card-edit-dialog-title').val();
                 card_obj.notes = $('#card-edit-dialog-notes').val();
@@ -249,7 +261,8 @@ function drawNewCard(id, text, notes, x, y, rot, colour, sticker, animationspeed
                 card_edit_dialog.dialog('close');
             }
 
-            var on_save_as = function(){
+            var on_save_as = function()
+            {
                 var colour = $('#card-edit-dialog-colour').val();
                 var text = $('#card-edit-dialog-title').val();
                 var notes = $('#card-edit-dialog-notes').val();
@@ -259,7 +272,8 @@ function drawNewCard(id, text, notes, x, y, rot, colour, sticker, animationspeed
                 card_edit_dialog.dialog('close');
             }
             
-            var on_cancel = function(){
+            var on_cancel = function()
+            {
                 card_edit_dialog.dialog('close');
             }
             
@@ -396,16 +410,6 @@ function createCard( id, text, x, y, rot, colour, notes )
 	sendAction(action, data);
 	
 }
-
-function randomCardColour()
-{
-	var colours = ['yellow', 'green', 'blue', 'white'];
-	
-	var i = Math.floor(Math.random() * colours.length);
-	
-	return colours[i];
-}
-
 
 function initCards( cardArray )
 {

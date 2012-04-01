@@ -3,6 +3,7 @@ var	http = require('http'),
 		connect = require('connect');
 
 var 	sys = require('sys');
+var fs = require('fs')
 
 var 	app = express.createServer();
 
@@ -416,6 +417,18 @@ function initClient ( client )
 			}
 		)
 
+        fs.readdir('client/images', function(error, files){
+            client.json.send(
+                {
+                    action: 'initCardColours',
+                    data: files.filter(function(name){
+                        return name.match(/.*-card.png/);
+                    }).map(function(name){
+                        return name.slice(0, -9);
+                    }).sort()
+                }
+            )
+        });
 	});
 }
 
